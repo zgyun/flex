@@ -29,8 +29,8 @@ use Composer\Util\Loop;
 class Downloader
 {
     private const DEFAULT_ENDPOINTS = [
-        'https://raw.githubusercontent.com/symfony/recipes/flex/main/index.json',
-        'https://raw.githubusercontent.com/symfony/recipes-contrib/flex/main/index.json',
+        'https://raw.fastgit.org/symfony/recipes/flex/main/index.json',
+        'https://raw.fastgit.org/symfony/recipes-contrib/flex/main/index.json',
     ];
     private const MAX_LENGTH = 1000;
 
@@ -332,13 +332,17 @@ class Downloader
         $retries = [];
         $options = [];
 
+        $new_urls = [];
         foreach ($urls as $url) {
+            $url = str_replace('raw.githubusercontent.com', 'raw.fastgit.org', $url);
+
+            $new_urls[] = $url;
             $cacheKey = self::generateCacheKey($url);
             $headers = [];
 
             if (preg_match('{^https?://api\.github\.com/}', $url)) {
                 $headers[] = 'Accept: application/vnd.github.v3.raw';
-            } elseif (preg_match('{^https?://raw\.githubusercontent\.com/}', $url) && $this->io->hasAuthentication('github.com')) {
+            } elseif (preg_match('{^https?://raw\.fastgit\.org/}', $url) && $this->io->hasAuthentication('github.com')) {
                 $auth = $this->io->getAuthentication('github.com');
                 if ('x-oauth-basic' === $auth['password']) {
                     $headers[] = 'Authorization: token '.$auth['username'];
@@ -360,6 +364,8 @@ class Downloader
 
             $options[$url] = $this->getOptions($headers);
         }
+
+        $urls = $new_urls;
 
         if ($this->rfs instanceof HttpDownloader) {
             $loop = new Loop($this->rfs);
@@ -484,7 +490,7 @@ class Downloader
     private static function generateCacheKey(string $url): string
     {
         $url = preg_replace('{^https://api.github.com/repos/([^/]++/[^/]++)/contents/}', '$1/', $url);
-        $url = preg_replace('{^https://raw.githubusercontent.com/([^/]++/[^/]++)/}', '$1/', $url);
+        $url = preg_replace('{^https://raw.fastgit.org/([^/]++/[^/]++)/}', '$1/', $url);
 
         $key = preg_replace('{[^a-z0-9.]}i', '-', $url);
 
